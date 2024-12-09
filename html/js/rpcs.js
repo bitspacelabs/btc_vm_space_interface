@@ -3,8 +3,9 @@ main_utxoBaseRpc = 'https://mempool.space/api/address/'
 main_baseMempool = 'https://mempool.space'
 
 
-test_baseURL = 'http://54.206.113.217:8080'
-// test_baseURL = 'http://127.0.0.1:3333'
+// test_baseURL = 'http://54.206.113.217:8080'
+// test_baseURL = 'https://127.0.0.1/test'
+test_baseURL = 'https://api.btcspace.org/test'
 
 test_utxoBaseRpc = 'https://mempool-testnet.fractalbitcoin.io/api/address/'
 test_baseMempool = 'https://mempool-testnet.fractalbitcoin.io'
