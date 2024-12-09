@@ -14,6 +14,12 @@
             <a class="logo-box" style="display: block; flex: 1;" href="index.html">
                 <svg xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="0 0 65 65" width="20" height="20" class="ng-star-inserted"><g transform="translate(0.00630876,-0.00301984)"><path d="m63.033,39.744c-4.274,17.143-21.637,27.576-38.782,23.301-17.138-4.274-27.571-21.638-23.295-38.78,4.272-17.145,21.635-27.579,38.775-23.305,17.144,4.274,27.576,21.64,23.302,38.784z" fill="#f7931a"></path><path fill="#FFF" d="m46.103,27.444c0.637-4.258-2.605-6.547-7.038-8.074l1.438-5.768-3.511-0.875-1.4,5.616c-0.923-0.23-1.871-0.447-2.813-0.662l1.41-5.653-3.509-0.875-1.439,5.766c-0.764-0.174-1.514-0.346-2.242-0.527l0.004-0.018-4.842-1.209-0.934,3.75s2.605,0.597,2.55,0.634c1.422,0.355,1.679,1.296,1.636,2.042l-1.638,6.571c0.098,0.025,0.225,0.061,0.365,0.117-0.117-0.029-0.242-0.061-0.371-0.092l-2.296,9.205c-0.174,0.432-0.615,1.08-1.609,0.834,0.035,0.051-2.552-0.637-2.552-0.637l-1.743,4.019,4.569,1.139c0.85,0.213,1.683,0.436,2.503,0.646l-1.453,5.834,3.507,0.875,1.439-5.772c0.958,0.26,1.888,0.5,2.798,0.726l-1.434,5.745,3.511,0.875,1.453-5.823c5.987,1.133,10.489,0.676,12.384-4.739,1.527-4.36-0.076-6.875-3.226-8.515,2.294-0.529,4.022-2.038,4.483-5.155zm-8.022,11.249c-1.085,4.36-8.426,2.003-10.806,1.412l1.928-7.729c2.38,0.594,10.012,1.77,8.878,6.317zm1.086-11.312c-0.99,3.966-7.1,1.951-9.082,1.457l1.748-7.01c1.982,0.494,8.365,1.416,7.334,5.553z"></path></g></svg>
                 <span>BTC <span class="hiddenphone">VM SPACE</span></span>
+                <div style="padding: 0px 20px;">
+                    <select id="netid" onchange="netChange()">
+                        <option value="btc">Bitcoin Minnet</option>
+                        <option value="fb-test">FB Test</option>
+                    </select>
+                </div>
             </a>
             <div class="d-flex">
                 <div class="search-box-container mr-2">
@@ -53,11 +59,13 @@
                           <li class="layui-this" lay-id="logs">Logs</li>
                           <li lay-id="code">Space Code</li>
                           <li lay-id="space">Space (Read/Write)</li>
+                          <li lay-id="holders" id="holders_tab_title">Holders</li>
                         </ul>
                         <div class="layui-tab-content">
                           <div class="layui-tab-item layui-show">
                                 <div>
                                     <ul id="logs_ul"></ul>
+                                    <button onclick="next_logs(res_spaceID.innerText)" class="next_logs"> next logs </button>
                                 </div>
                           </div>
                           <div class="layui-tab-item">
@@ -73,8 +81,47 @@
                                     <div> Read Space Information</div>
                                     <div id="read_space" class="read_space_collapse"></div>
                                 </div>
+                                <div>
+                                    <br />
+                                    <div> Write Space</div>
+                                    <div class="">
+                                        <div style="display: flex;">
+                                            <div>Address:</div>
+                                            <div id="ws_address" onclick="onGetAddress()"></div>
+                                        </div>
+                                        <div style="display: flex;">
+                                            <div>Fee:</div>
+                                            <input placeholder="fee value" id="ws_fee" value="700" />
+                                        </div>
+                                        <div style="display: flex;">
+                                            <div>Receiver?:</div>
+                                            <input placeholder="If a receiver is required" id="recv_id" value="" />
+                                        </div>
+
+                                        <div>
+                                            <div>Select UTXO:</div>
+                                            <span id="s_utxo_text"></span>
+                                        </div>
+
+                                        <br />
+                                        <div>UTXOs:</div>
+                                        <div id="utxobox"></div>
+                                        
+                                        <br />
+                                        <div id="ws_list"></div>
+                                    </div>
+                                </div>
                             </div>                    
                           </div>
+                          
+
+                          <div class="layui-tab-item">
+                            <div>
+                                <div id="holders_box">
+                                </div>
+                            </div>                    
+                          </div>
+
                         </div>
                       </div>
                 </div>
@@ -109,8 +156,14 @@
                         res_hash.appendChild(a)
                         res_spaceID.innerText = data.spaceid
                         res_type.innerText = data.type
-                        res_vm_text.innerText = data.vm_text
+                        let vm_text = data.vm_text
+                        
+                        if(data.type === 'btc20'){
+                            vm_text += BTC20SPACE
+                        }
+                        res_vm_text.innerText = vm_text
 
+                        setWSList(vm_text)
                         if(data.type === 'btc20'){
                             try {
                                 const obj = JSON.parse(data.space)
@@ -151,6 +204,8 @@
                                 token.appendChild(box)
                             } catch (error) {
                             }
+                        }else{
+                            holders_tab_title.setAttribute('style', 'display:none')
                         }
 
                         // read_space
@@ -171,6 +226,18 @@
                                 if(typeof val !=="object") {
                                     nodeContent.innerText = obj[key]
                                 }else{
+                                    if(key === 'balances'){
+                                        const holdersNode = document.createElement('div')
+                                        holders_box.appendChild(holdersNode)
+                                        Object.keys(val).map((addr) => {
+                                            const addressNode = document.createElement('a')
+                                            addressNode.href = getMempoolAddressUrl(addr)
+                                            addressNode.setAttribute('target', '_blank')
+                                            addressNode.innerText = shortAddress(addr) + ':' + val[addr]
+                                            addressNode.className = 'user-item'
+                                            holdersNode.appendChild(addressNode)
+                                        })
+                                    }
                                     const selectNode = document.createElement('div')
                                     const inputNode = document.createElement('input')
                                     const buttonNode = document.createElement('button')
@@ -194,7 +261,7 @@
                                         resNode.className = 'res'
                                         selectNode.appendChild(resNode)
                                         if(res) {
-                                            resNode.innerText = res
+                                            resNode.innerText = typeof res ==="object" ? JSON.stringify(res) : res
                                         }else{
                                             resNode.innerText = 'NULL'
                                             resNode.setAttribute('style', 'text-align: center')
@@ -215,6 +282,169 @@
         const url = new URL(window.location.href)
         const url_spaceid = url.searchParams.get('spaceid')
         onsearch(url_spaceid)
+
+
+        let select_utxo
+
+
+        const onGetAddress = async () => {
+            try {
+            let res = await wallet.getAccounts();
+            console.log(res)
+            if(res.length === 0){
+                ws_address.innerText = 'Connect'
+                await wallet.requestAccounts();
+                onGetAddress()
+                return
+            }
+            ws_address.innerText = res[0]
+            if(ws_address.innerText) {
+                utxobox.innerHTML = ''
+                // const res = await axios.get('https://mempool.space/api/address/' + ws_address.innerText + '/utxo')
+                const res = await axios.get(window.utxoBaseRpc + ws_address.innerText + '/utxo')
+                if(res.data){
+                    res.data.map(e => {
+                        return {
+                            txid: e.txid,
+                            vout: e.vout,
+                            value: e.value,
+                        }
+                    }).forEach((e, index) => {
+                        var node = document.createElement('div')
+                        node.setAttribute('style', 'white-space: break-spaces;word-break:break-all;cursor:pointer;')
+                        // node.innerText = JSON.stringify(e)
+                        node.innerText = [shortHash2(e.txid), e.vout, e.value / 1e8 + 'btc'].join('__')
+                        node.onclick = () => {
+                            select_utxo = e
+                            s_utxo_text.innerText = [shortHash2(e.txid), e.vout, e.value / 1e8 + 'btc'].join('__')
+                        }
+                        utxobox.appendChild(node)
+                        
+                        if(!select_utxo && index === 0) {
+                            select_utxo = e
+                            s_utxo_text.innerText = [shortHash2(e.txid), e.vout, e.value / 1e8 + 'btc'].join('__')
+                        }
+                    })
+                }
+                // utxobox
+            }
+            } catch (e) {
+                console.log(e);
+                ws_address.innerText = 'Connect'
+            }
+        }
+        const setWSList = (res_vm_text) => {
+            
+            // console.log('res_vm_text::', res_vm_text)
+            res_vm_text.match(/(?<=function pub_)(.*)(?=\))/g).map(e => e.split('(')).map((e) => {
+                if(e[1].length == 0){
+                    return {
+                        func_name: e[0],
+                        params: []
+                    }
+                } 
+                return {
+                    func_name: e[0],
+                    params:e[1].split(',')
+                }
+            }).map((e) => {
+                const node = document.createElement('div')
+                const nodeName = document.createElement('div')
+                const callBlockNode = document.createElement('div')
+                nodeName.innerHTML = e.func_name
+                node.appendChild(nodeName)
+                node.appendChild(callBlockNode)
+                callBlockNode.setAttribute('style', 'display: flex;flex-direction: column;')
+                callBlockNode.className = 'ws_call_block'
+                const params_val = []
+                for (const [param_name, i] of e.params.map((e, i) => [e, i])) {
+                    params_val.push('')
+                    const input = document.createElement('input')
+                    input.placeholder = param_name
+                    if(e.func_name == 'transfer') {
+                        if(param_name === ' FUI'){
+                            input.value = 1
+                            input.setAttribute('disable', true)
+                        }
+                        if(param_name === ' TUI'){
+                            input.value = 2
+                            input.setAttribute('disable', true)
+                        }
+                    }
+                    input.oninput = () => {
+                        params_val[i] = input.value
+                    }
+                    callBlockNode.appendChild(input)
+                }
+                var button = document.createElement('button')
+                callBlockNode.appendChild(button)
+                button.innerText = e.func_name 
+
+                
+                
+                button.onclick = () => {
+                    const recv = recv_id.value
+                    console.log(recv_id, recv)
+                    onSend(e.func_name, params_val.length === 0 ? '' : JSON.stringify(params_val), recv)
+                }
+                ws_list.appendChild(node)
+            })
+
+        }
+        setTimeout(() => {
+            onGetAddress()
+            
+            // TODO 
+            // setWSList()
+        }, 900)
+
+        const onSend = (func_name, space_params, recv) => {
+            const payerAddress = ws_address.innerText
+            if(!payerAddress) {
+                return 
+            }
+            const spaceId = res_spaceID.innerText
+            if(!spaceId){
+                return
+            }
+            const fee_value = ws_fee.value
+
+            if(!fee_value) {
+                return 
+            }
+
+            if(!select_utxo) {
+                return
+            }
+
+            // const utxo = {"txid":"19638ee8f3a37fbe5fa8b09b42a853f418045fff148eff84671607122706ec1d","vout":1,"value":80540}
+            const spaceCall = space_params.length ? [spaceId, func_name, space_params].join(' ') : [spaceId, func_name].join(' ')
+
+            const params = {
+                payerAddress,
+                spaceCall,
+                fee_value,
+                txid: select_utxo.txid,
+                vout: select_utxo.vout,
+                value: select_utxo.value,
+                recv
+            }
+            console.log(params)
+
+            axios.get(baseURL + '/api/call_psbt', {params}).then(async res => {
+                const psbthex = res.data.data
+                console.log(psbthex)
+                if(psbthex) {
+                    let sign_psbt_res = await wallet.signPsbt(psbthex)
+                    console.log(sign_psbt_res)
+                    if(sign_psbt_res) {
+                        const id = await wallet.pushPsbt(sign_psbt_res)
+                        alert('txid:' + id)
+                    }
+                }
+            })
+
+        }
 
         layui.use(function(){
   var element = layui.element;

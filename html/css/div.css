@@ -249,6 +249,7 @@ pre{
     background-color: var(--box-bg);
     padding: 14px;
     border-radius: 4px;
+    margin-top: 10px;
 }
 
 .token-infos{
@@ -281,11 +282,27 @@ pre{
 .read_space_collapse .colla-item .colla-content .select-node{
     display: flex;
 }
-.read_space_collapse .colla-item .colla-content button{
+.read_space_collapse .colla-item .colla-content button, #ws_list button, .next_logs{
     background-color: var(--tertiary);
     color: #fff;
+    padding: 0px 10px; 
+    gap: 10px;
 }
-.read_space_collapse .colla-item .colla-content input{
+.next_logs{
+    margin-top: 40px;
+}
+.ws_call_block{
+    gap: 10px;
+    margin-top: 5px;
+    margin-bottom: 20px;
+}
+#ws_address{
+    width: 100%;
+    overflow: hidden;
+    text-overflow:ellipsis;
+    white-space: nowrap;
+}
+.read_space_collapse .colla-item .colla-content input, #ws_list input, #ws_fee, #recv_id{
     flex: 1;
     max-width: 600px;
     background-color: transparent;
@@ -313,4 +330,11 @@ pre{
 }
 .read_space_collapse{
     margin-top: 10px;
+}
+.layui-tab-bar{
+    background-color: #000;
+}
+.user-item{
+    display: block;
+    margin-bottom: 20px;
 }

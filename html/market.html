@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC20 Market</title>
+</head>
+<body>
+    <div>
+        <button onclick="onGetAddress()">Connect wallet</button>
+        <div id="ws_address"></div>
+    </div>
+    <input id="sell_num" placeholder="sell_num" />
+    <input id="sell_value" placeholder="sell_value" />
+    <button onclick="onlist()">list $btcfi</button>
+
+    <br />
+
+    
+    <div>
+        <div>Select UTXO:</div>
+        <span id="s_utxo_text"></span>
+    </div>
+    
+    <br />
+    <div>UTXOs:</div>
+    <div id="utxobox"></div>
+    
+
+    <br />
+    <div id="market_list_box"></div>
+</body>
+<script src="./js/axios.min.js"></script>
+<script src="./js/rpcs.js"></script>
+<script>
+    const spaceId = 'bfvm'
+
+    let address = ''
+    let select_utxo
+    const onGetAddress = async () => {
+            try {
+            let res = await wallet.getAccounts();
+            console.log(res)
+            if(res.length === 0){
+                await wallet.requestAccounts();
+                onGetAddress()
+                return
+            }
+            ws_address.innerText = res[0]
+            address = res[0]
+
+            if(address){
+                utxobox.innerHTML = ''
+                // const res = await axios.get('https://mempool.space/api/address/' + ws_address.innerText + '/utxo')
+                const res = await axios.get(window.utxoBaseRpc + ws_address.innerText + '/utxo')
+                if(res.data){
+                    res.data.map(e => {
+                        return {
+                            txid: e.txid,
+                            vout: e.vout,
+                            value: e.value,
+                        }
+                    }).forEach((e, index) => {
+                        var node = document.createElement('div')
+                        node.setAttribute('style', 'white-space: break-spaces;word-break:break-all;cursor:pointer;')
+                        // node.innerText = JSON.stringify(e)
+                        node.innerText = [shortHash2(e.txid), e.vout, e.value / 1e8 + 'btc'].join('__')
+                        node.onclick = () => {
+                            select_utxo = e
+                            s_utxo_text.innerText = [shortHash2(e.txid), e.vout, e.value / 1e8 + 'btc'].join('__')
+                        }
+                        utxobox.appendChild(node)
+                        
+                        if(!select_utxo && index === 0) {
+                            select_utxo = e
+                            s_utxo_text.innerText = [shortHash2(e.txid), e.vout, e.value / 1e8 + 'btc'].join('__')
+                        }
+                    })
+                }
+            }
+        }catch {}
+    }
+    window.onlist = () => {
+        console.log(address)
+        console.log(sell_num.value)
+        console.log(sell_value.value)
+
+        const spaceCall = [spaceId, 'transfer', JSON.stringify([parseFloat(sell_num.value), 1, 4])].join(' ')
+
+        console.log(spaceCall)
+        const api = baseURL + `/api/market/sell/call_psbt`
+
+        const data = {
+            txid: select_utxo.txid,
+            vout: select_utxo.vout,
+            value: select_utxo.value,
+            sell_address: address,
+            spaceCall,
+            seller_receiver_value: sell_value.value * 1e8
+        }
+        console.log(data)
+        return
+        axios.post(api, data).then(async res => {
+            console.log(res.data?.data)
+            const psbthex = res.data.data
+            if(psbthex){ 
+                let sign_psbt_res = await wallet.signPsbt(psbthex)
+                    console.log(sign_psbt_res)
+                    if(sign_psbt_res) {
+                        //
+                        axios.post(baseURL + '/api/market/sell/addlist', {
+                            psbt: sign_psbt_res
+                        }).then(res => {
+                            alert('list success')
+                        })
+                    }
+            }
+        })
+    }
+
+    const done = (sell_sign) => {
+        axios.post(baseURL + '/api/market/sell/update_1', {
+            psbt: sell_sign
+        })
+    }
+    const getMarketList = () => {
+        const api = baseURL + `/api/market/list?spaceid=`
+        axios.get(api + spaceId).then(res => {
+            console.log(res.data?.data)
+            const data = res.data.data
+            if(data){ 
+                
+                for (const item of data) {
+                    var node = document.createElement('div')
+                    var sell_num_node = document.createElement('div')
+                    var sell_value_node = document.createElement('div')
+                    var sell_address_node = document.createElement('div')
+                    var buy_node = document.createElement('button')
+                    buy_node.innerText = 'buy'
+                    buy_node.setAttribute('style', 'cursor: pointer;')
+                    sell_num_node.innerText = 'sell num::' + item.sell_num
+                    sell_value_node.innerText = 'sell value::' + item.utxo_value
+                    sell_address_node.innerText = 'seller::' + item.sell_address
+                    buy_node.onclick = () => {
+                        console.log(item)
+                        // done(item.sell_sign)
+                        // return
+
+                        // const txid = ctx.request.body.txid;
+                        // const vout = parseInt(ctx.request.body.vout);
+                        // const value = parseInt(ctx.request.body.value);
+                        // const buy_address = ctx.request.body.buy_address;
+                        // const seller_receiver_value = parseInt(ctx.request.body.seller_receiver_value);
+                        // const sellPsbtHex = ctx.request.body.sellPsbtHex;
+                        axios.post(baseURL + '/api/market/buy/call_psbt', {
+                            txid: select_utxo.txid,
+                            vout: select_utxo.vout,
+                            value: select_utxo.value,
+                            buy_address: address,
+                            seller_receiver_value: item.utxo_value * 1e8,
+                            sellPsbtHex: item.sell_sign
+                        }).then(async res => {
+                            console.log(res.data?.data)
+                            const psbthex = res.data.data
+                            if(psbthex){ 
+                                let sign_psbt_res = await wallet.signPsbt(psbthex)
+                                console.log(sign_psbt_res)
+                                if(sign_psbt_res) {
+                                    const id = await wallet.pushPsbt(sign_psbt_res)
+                                    if(id){
+                                        done(item.sell_sign)
+                                        alert(id)
+                                    }
+                                }
+                            }
+                        })
+                    }
+                    node.setAttribute('style', 'border: 1px solid')
+                    node.appendChild(sell_num_node)
+                    node.appendChild(sell_value_node)
+                    node.appendChild(sell_address_node)
+                    node.appendChild(buy_node)
+                    market_list_box.appendChild(node)
+                }
+                
+            }
+        })
+    }
+    getMarketList()
+</script>
+</html>
